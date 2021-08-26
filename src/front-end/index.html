@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Translate App</title>
+
+    <link href="#" rel="shortcut icon">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.856.0.min.js"></script>
+    <script src="scripts.js"></script>
+</head>
+
+<body onload="getJobList()";>
+    <div class="container">
+        <div class="jumbotron">
+            <h1>Subtitle and Translate Video</h1>
+            <p>Submit an mp4 file. Add translated subtitles. Add translated audio tracks.</p>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Upload source video file</h5>
+                <div class="input-group mb-3">
+                    <div class="custom-file">
+                        <input type="file" class="custom-file-input" id="file" name="file" accept=".mp4" onchange="getFileName(this)" required>
+                        <label class="custom-file-label" id="custom-file-label" name="custom-file-label" for="file">Choose
+                            file</label>
+                    </div>
+                </div>
+            </div>
+            </div>
+            <p></p>
+            <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Select the language of the source video file</h5>
+                <form id="jobParams" name="jobParams">
+                        <select class="form-control" name="source" id="source" onchange="sourceOptions()">
+                            <option value="en|en-US">English</option>
+                            <option value="es|es-ES">Spanish</option>
+                            <option value="fr|fr-FR">French</option>
+                            <option value="de|de-DE">German</option>
+                            <option value="it|it-IT">Italian</option>
+                            <option value="ja|ja-JP">Japanese</option>
+                            <option value="ko|ko-KR">Korean</option>
+                            <option value="id|id-ID">Indonesian</option>
+                        </select>
+            </div>
+        </div>
+        <p></p>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Select Subtitle Track(s)</h5>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="subtitle" id="subtitle_en" value="en|en-US" checked disabled>
+                    <label class="form-check-label" for="subtitle_en">English</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="subtitle" id="subtitle_es" value="es|es-ES">
+                    <label class="form-check-label" for="subtitle_es">Spanish</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="subtitle" id="subtitle_fr" value="fr|fr-FR">
+                    <label class="form-check-label" for="subtitle_fr">French</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="subtitle" id="subtitle_de" value="de|de-DE">
+                    <label class="form-check-label" for="subtitle_de">German</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="subtitle" id="subtitle_it" value="it|it-IT">
+                    <label class="form-check-label" for="subtitle_it">Italian</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="subtitle" id="subtitle_ja" value="ja|ja-JP">
+                    <label class="form-check-label" for="subtitle_ja">Japanese</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="subtitle" id="subtitle_ko" value="ko|ko-KR">
+                    <label class="form-check-label" for="subtitle_ko">Korean</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="subtitle" id="subtitle_id" value="id|id-ID">
+                    <label class="form-check-label" for="subtitle_id">Indonesian</label>
+                  </div>
+            </div>
+        </div>
+        <p></p>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Select Audio Track(s)</h5>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="polly" id="polly_en" value="en|en-US|Joanna" disabled>
+                    <label class="form-check-label" for="polly_en">English</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="polly" id="polly_es" value="es|es-ES|Conchita">
+                    <label class="form-check-label" for="polly_es">Spanish</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="polly" id="polly_fr" value="fr|fr-FR|Lea">
+                    <label class="form-check-label" for="polly_fr">French</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="polly" id="polly_de" value="de|de-DE|Hans">
+                    <label class="form-check-label" for="polly_de">German</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="polly" id="polly_it" value="it|it-IT|Giorgio">
+                    <label class="form-check-label" for="polly_it">Italian</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="polly" id="polly_ja" value="ja|ja-JP|Mizuki">
+                    <label class="form-check-label" for="polly_ja">Japanese</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" name="polly" id="polly_ko" value="ko|ko-KR|Seoyeon">
+                    <label class="form-check-label" for="polly_ko">Korean</label>
+                  </div>
+                  <div class="form-check form-check-inline" style="display:none">
+                    <input class="form-check-input" type="checkbox" name="polly" id="polly_id" value="id|id-ID|NoPolly">
+                    <label class="form-check-label" for="polly_ko">Indonesian</label>
+                  </div>
+            </div>
+        </div>
+
+        </form>
+
+        <br>
+            <button class="btn btn-primary" type="button" name="btnSubmit" id="btnSubmit" onclick="startJob()">
+                <span name="btnLoading" id="btnLoading" class="spinner-border spinner-border-sm" style="display: none;"></span>
+                <span name="btnText" id="btnText">Submit Job</span>
+              </button>
+
+    </div>
+    <div class="container">
+        <hr/>
+    </div>
+    <div class="container">
+        <div class="row">
+        <div class="col" >
+            <h3>Video Translation Jobs</h3>
+        </div>
+        <div class="col">
+            <div class="float-right">
+                <input type="button" class="btn btn-info" name="btnRefresh" id="btnRefresh" value="Refresh Job List"
+                onclick="getJobList()" />
+            </div>
+          </div>
+    </div>
+        </div>
+        
+    <div class="container" id="jobList"></div>
+
+</body>
+
+</html>

@@ -1,0 +1,1635 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "This sets up the Subtitle and Translate Video blog environment"
+
+Parameters:
+  S3CodeBucket:
+    Type: "String"
+    AllowedPattern: "^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$"
+    Description: "The bucket that has already been created that has the code for the blog post"
+
+Resources:
+##############
+# S3 Buckets #
+##############
+    stvblogLogBucket:
+        Type: "AWS::S3::Bucket"
+        Properties:
+            PublicAccessBlockConfiguration:
+                BlockPublicAcls: true
+                BlockPublicPolicy: true
+                IgnorePublicAcls: true
+                RestrictPublicBuckets: true
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                - ServerSideEncryptionByDefault:
+                    SSEAlgorithm: "AES256"
+                  BucketKeyEnabled: false
+            AccessControl: "LogDeliveryWrite"
+    
+    stvblogBucket:
+        Type: "AWS::S3::Bucket"
+        Properties:
+            CorsConfiguration: 
+                CorsRules: 
+                  - 
+                    AllowedHeaders: 
+                      - "*"
+                    AllowedMethods: 
+                      - "HEAD"
+                      - "GET"
+                      - "PUT"
+                      - "POST"
+                      - "DELETE"
+                    AllowedOrigins: 
+                      - "*"
+            PublicAccessBlockConfiguration:
+                BlockPublicAcls: true
+                BlockPublicPolicy: true
+                IgnorePublicAcls: true
+                RestrictPublicBuckets: true
+            LoggingConfiguration:
+                DestinationBucketName: !Ref stvblogLogBucket
+                LogFilePrefix: "S3Logs"
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                - ServerSideEncryptionByDefault:
+                    SSEAlgorithm: "AES256"
+                  BucketKeyEnabled: false
+
+    stvblogAppBucket:
+        Type: "AWS::S3::Bucket"
+        Properties:
+            CorsConfiguration: 
+                CorsRules: 
+                  - 
+                    AllowedHeaders: 
+                      - "*"
+                    AllowedMethods: 
+                      - "HEAD"
+                      - "GET"
+                      - "PUT"
+                      - "POST"
+                      - "DELETE"
+                    AllowedOrigins: 
+                      - "*"
+            PublicAccessBlockConfiguration:
+                BlockPublicAcls: true
+                BlockPublicPolicy: true
+                IgnorePublicAcls: true
+                RestrictPublicBuckets: true
+            LoggingConfiguration:
+                DestinationBucketName: !Ref stvblogLogBucket
+                LogFilePrefix: "S3Logs"
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                - ServerSideEncryptionByDefault:
+                    SSEAlgorithm: "AES256"
+                  BucketKeyEnabled: false
+
+    stvblogInBucket:
+        Type: "AWS::S3::Bucket"
+        Properties:
+            CorsConfiguration: 
+                CorsRules: 
+                  - 
+                    AllowedHeaders: 
+                      - "*"
+                    AllowedMethods: 
+                      - "HEAD"
+                      - "GET"
+                      - "PUT"
+                      - "POST"
+                      - "DELETE"
+                    AllowedOrigins: 
+                      - "*"
+            PublicAccessBlockConfiguration:
+                BlockPublicAcls: true
+                BlockPublicPolicy: true
+                IgnorePublicAcls: true
+                RestrictPublicBuckets: true
+            LoggingConfiguration:
+                DestinationBucketName: !Ref stvblogLogBucket
+                LogFilePrefix: "S3Logs"
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                - ServerSideEncryptionByDefault:
+                    SSEAlgorithm: "AES256"
+                  BucketKeyEnabled: false
+
+
+######################
+# S3 Bucket Policies #
+######################
+
+    stvblogBucketS3BucketPolicy:
+        Type: "AWS::S3::BucketPolicy"
+        DependsOn: stvblogCloudFrontOriginAccessIdentity
+        Properties:
+            Bucket: !Ref stvblogBucket
+            PolicyDocument: 
+                Version: "2008-10-17"
+                Id: "PolicyForCloudFrontPrivateContent"
+                Statement: 
+                  - 
+                    Sid: "1"
+                    Effect: "Allow"
+                    Principal: 
+                        AWS: !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${stvblogCloudFrontOriginAccessIdentity}"
+                    Action: 
+                        - "s3:GetObject"
+                    Resource: !Sub "${stvblogBucket.Arn}/*"
+
+    stvblogAppBucketS3BucketPolicy:
+        Type: "AWS::S3::BucketPolicy"
+        DependsOn: stvblogCloudFrontOriginAccessIdentity
+        Properties:
+            Bucket: !Ref stvblogAppBucket
+            PolicyDocument: 
+                Version: "2008-10-17"
+                Id: "PolicyForCloudFrontPrivateContent"
+                Statement: 
+                  - 
+                    Sid: "1"
+                    Effect: "Allow"
+                    Principal: 
+                        AWS: !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${stvblogCloudFrontOriginAccessIdentity}"
+                    Action: "s3:GetObject"
+                    Resource: !Sub "${stvblogAppBucket.Arn}/*"
+
+
+################
+# IAM Policies #
+################
+    stvblogAllowLoggingPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Path: "/"
+            PolicyDocument: |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "logs:CreateLogDelivery",
+                                "logs:GetLogDelivery",
+                                "logs:UpdateLogDelivery",
+                                "logs:DeleteLogDelivery",
+                                "logs:ListLogDeliveries",
+                                "logs:PutResourcePolicy",
+                                "logs:DescribeResourcePolicies",
+                                "logs:DescribeLogGroups"
+                            ],
+                            "Resource": "*"
+                        }
+                    ]
+                }
+
+    stvblogCloudWatchLogsDeliveryFullAccessPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Path: "/"
+            PolicyDocument: |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "logs:CreateLogDelivery",
+                                "logs:GetLogDelivery",
+                                "logs:UpdateLogDelivery",
+                                "logs:DeleteLogDelivery",
+                                "logs:ListLogDeliveries",
+                                "logs:PutResourcePolicy",
+                                "logs:DescribeResourcePolicies",
+                                "logs:DescribeLogGroups"
+                            ],
+                            "Resource": "*"
+                        }
+                    ]
+                }
+
+    stvblogLambdaExecutionPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Path: "/"
+            PolicyDocument: !Sub |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "polly:SynthesizeSpeech",
+                                "translate:ListTextTranslationJobs",
+                                "dynamodb:ListTables",
+                                "mediaconvert:ListQueues",
+                                "mediaconvert:DescribeEndpoints",
+                                "mediaconvert:ListPresets",
+                                "transcribe:ListTranscriptionJobs",
+                                "polly:ListSpeechSynthesisTasks",
+                                "translate:DescribeTextTranslationJob",
+                                "mediaconvert:CreatePreset",
+                                "transcribe:GetTranscriptionJob",
+                                "polly:StartSpeechSynthesisTask",
+                                "ssm:DescribeParameters",
+                                "polly:GetSpeechSynthesisTask",
+                                "transcribe:StartTranscriptionJob",
+                                "mediaconvert:DisassociateCertificate",
+                                "mediaconvert:CreateQueue",
+                                "translate:StartTextTranslationJob",
+                                "mediaconvert:AssociateCertificate",
+                                "translate:TranslateText",
+                                "mediaconvert:ListJobTemplates"
+                            ],
+                            "Resource": "*"
+                        },
+                        {
+                            "Action": [
+                                "logs:*"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": "*"
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "iam:PassRole"
+                            ],
+                            "Resource": "*",
+                            "Condition": {
+                                "StringLike": {
+                                    "iam:PassedToService": [
+                                        "mediaconvert.amazonaws.com"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "dynamodb:CreateTable",
+                                "s3:GetObject",
+                                "mediaconvert:*",
+                                "dynamodb:PutItem",
+                                "lambda:InvokeFunction",
+                                "dynamodb:GetItem",
+                                "dynamodb:UpdateItem",
+                                "logs:CreateLogGroup",
+                                "dynamodb:UpdateTable",
+                                "dynamodb:Scan"
+                            ],
+                            "Resource": [
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogPrepareProcess",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogTranscribeMedia",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckTranscribeJobStatus",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreatePhrasesFromTranscription",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogTranslateTranscript",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckTranslationJobStatus",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCombinePhrasesAndTranslation",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreatePollyAudio",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreateSSML",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreatePollyAudio",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCopyResultsToFinalInput",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreateMediaConvertJob",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckMediaConvertJobStatus",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogFinalizeProcess",
+                                "arn:aws:mediaconvert:${AWS::Region}:${AWS::AccountId}:queues/*",
+                                "arn:aws:mediaconvert:${AWS::Region}:${AWS::AccountId}:jobs/*",
+                                "arn:aws:s3:::${stvblogBucket}/*",
+                                "arn:aws:s3:::${stvblogBucket}",
+                                "arn:aws:s3:::${stvblogInBucket}/*",
+                                "arn:aws:s3:::${stvblogInBucket}",
+                                "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*",
+                                "arn:aws:dynamodb:*:${AWS::AccountId}:table/stvblog"
+                            ]
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "logs:CreateLogStream",
+                                "lambda:InvokeFunction",
+                                "s3:ListBucket",
+                                "logs:PutLogEvents"
+                            ],
+                            "Resource": [
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogPrepareProcess:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogTranscribeMedia:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckTranscribeJobStatus:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreatePhrasesFromTranscription:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogTranslateTranscript:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckTranslationJobStatus:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCombinePhrasesAndTranslation:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreatePollyAudio:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreateSSML:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCopyResultsToFinalInput:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreateMediaConvertJob:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckMediaConvertJobStatus:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogFinalizeProcess:*",
+                                "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda:*",
+                                "arn:aws:s3:::${stvblogBucket}/*",
+                                "arn:aws:s3:::${stvblogBucket}",
+                                "arn:aws:s3:::${stvblogInBucket}/*",
+                                "arn:aws:s3:::${stvblogInBucket}"
+                            ]
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": "s3:PutObject",
+                            "Resource": [
+                                "arn:aws:s3:::${stvblogBucket}/*",
+                                "arn:aws:s3:::${stvblogInBucket}/*"
+                            ]
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "ssm:PutParameter",
+                                "ssm:GetParameters",
+                                "ssm:GetParameter"
+                            ],
+                            "Resource": "arn:aws:ssm:*:${AWS::AccountId}:parameter/stvblog/*"
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "iam:GetRole",
+                                "iam:PassRole"
+                            ],
+                            "Resource": "arn:aws:iam::${AWS::AccountId}:role/${stvblogTranslateS3BucketPermissionsRole}"
+                        }
+                    ]
+                }
+                
+
+    stvblogLambdaInvokeScopedAccessPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Path: "/"
+            PolicyDocument: !Sub |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "lambda:InvokeFunction"
+                            ],
+                            "Resource": [
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCombinePhrasesAndTranslation:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreateSSML:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogFinalizeProcess:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckTranslationJobStatus:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckMediaConvertJobStatus:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogPrepareProcess:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogTranscribeMedia:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCopyResultsToFinalInput:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreateMediaConvertJob:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckTranscribeJobStatus:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreatePhrasesFromTranscription:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreatePollyAudio:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreateSRT:*",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogTranslateTranscript:*"
+                            ]
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "lambda:InvokeFunction"
+                            ],
+                            "Resource": [
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCombinePhrasesAndTranslation",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreateSSML",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogFinalizeProcess",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckTranslationJobStatus",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckMediaConvertJobStatus",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogPrepareProcess",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogTranscribeMedia",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCopyResultsToFinalInput",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreateMediaConvertJob",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckTranscribeJobStatus",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreatePhrasesFromTranscription",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreatePollyAudio",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreateSRT",
+                                "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogTranslateTranscript"
+                            ]
+                        }
+                    ]
+                }
+
+    stvblogS3BucketPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Path: "/"
+            PolicyDocument: !Sub |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Action": [
+                                "s3:GetObject"
+                            ],
+                            "Resource": [
+                                "arn:aws:s3:::${stvblogBucket}",
+                                "arn:aws:s3:::${stvblogBucket}/*"
+                            ],
+                            "Effect": "Allow"
+                        },
+                        {
+                            "Action": [
+                                "s3:ListBucket"
+                            ],
+                            "Resource": [
+                                "arn:aws:s3:::${stvblogBucket}"
+                            ],
+                            "Effect": "Allow"
+                        },
+                        {
+                            "Action": [
+                                "s3:PutObject"
+                            ],
+                            "Resource": [
+                                "arn:aws:s3:::${stvblogBucket}/*"
+                            ],
+                            "Effect": "Allow"
+                        }
+                    ]
+                }
+                
+
+    stvblogStepFunctionPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Path: "/"
+            PolicyDocument: !Sub |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "ExecuteStateMachine",
+                            "Effect": "Allow",
+                            "Action": "states:StartExecution",
+                            "Resource": [
+                                "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:stvblogProcessMedia"
+                            ]
+                        }
+                    ]
+                }
+
+    stvblogXRayAccessPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Path: "/"
+            PolicyDocument: |
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "xray:PutTraceSegments",
+                                "xray:PutTelemetryRecords",
+                                "xray:GetSamplingRules",
+                                "xray:GetSamplingTargets"
+                            ],
+                            "Resource": [
+                                "*"
+                            ]
+                        }
+                    ]
+                }
+
+#############
+# IAM Roles #
+#############
+    stvblogElementalMediaConvertRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/"
+            AssumeRolePolicyDocument: !Sub "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":[\"mediaconvert.${AWS::Region}.amazonaws.com\",\"mediaconvert.amazonaws.com\"]},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns: 
+              - !Ref stvblogS3BucketPolicy
+            Description: "Allows MediaConvert service to call S3 APIs and API Gateway on your behalf."
+
+    stvblogLambaExecuteRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns: 
+              - !Ref stvblogAllowLoggingPolicy
+              - !Ref stvblogLambdaExecutionPolicy
+            Description: "Allows Lambda functions to call AWS services on your behalf."
+
+    stvblogStepFunctionExecuteRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"apigateway.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns: 
+              - "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+              - !Ref stvblogStepFunctionPolicy
+            Description: "Allows API Gateway to push logs to CloudWatch Logs."
+
+    stvblogProcessMediaRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Sid\":\"\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"states.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns: 
+              - !Ref stvblogAllowLoggingPolicy
+              - !Ref stvblogLambdaInvokeScopedAccessPolicy
+              - !Ref stvblogXRayAccessPolicy
+            Description: "Allows Step Functions to access AWS resources on your behalf."
+
+    stvblogTranslateS3BucketPermissionsRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            Path: "/"
+            AssumeRolePolicyDocument: "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"translate.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}"
+            MaxSessionDuration: 3600
+            ManagedPolicyArns: 
+              - !Ref stvblogS3BucketPolicy
+            Description: "Allows EC2 instances to call AWS services on your behalf."
+
+#################
+# Lambda Layers #
+#################
+    stvblogBoto3LambdaLayer:
+        Type: "AWS::Lambda::LayerVersion"
+        Properties:
+            Description: "boto3"
+            CompatibleRuntimes: 
+              - "python3.8"
+            Content: 
+                S3Bucket: !Ref S3CodeBucket
+                S3Key: "layers/boto3.zip"
+
+    stvblogFfmpegLambdaLayer:
+        Type: "AWS::Lambda::LayerVersion"
+        Properties:
+            Description: "ffmpeg"
+            CompatibleRuntimes: 
+              - "python3.8"            
+            Content: 
+                S3Bucket: !Ref S3CodeBucket
+                S3Key: "layers/ffmpeg.zip"
+
+    stvblogPydubLambdaLayer:
+        Type: "AWS::Lambda::LayerVersion"
+        Properties:
+            Description: "pydub"
+            CompatibleRuntimes: 
+              - "python3.8"
+            Content: 
+                S3Bucket: !Ref S3CodeBucket
+                S3Key: "layers/pydublayer.zip"
+
+    stvblogStvblogLambdaLayer:
+        Type: "AWS::Lambda::LayerVersion"
+        Properties:
+            Description: "stvblog"
+            CompatibleRuntimes: 
+              - "python3.8"
+            Content: 
+                S3Bucket: !Ref S3CodeBucket
+                S3Key: "layers/stvblog.zip"
+
+####################
+# Lambda Functions #
+####################
+    stvblogCreatePollyAudioLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogFfmpegLambdaLayer
+            - stvblogPydubLambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogCreatePollyAudio"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogCreatePollyAudio.zip"
+            MemorySize: 1024
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 300
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+              - !Ref stvblogPydubLambdaLayer
+              - !Ref stvblogFfmpegLambdaLayer
+
+    stvblogCreateSRTLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogCreateSRT"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogCreateSRT.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+    stvblogCopyResultsToFinalInputLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogCopyResultsToFinalInput"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogCopyResultsToFinalInput.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+    stvblogCombinePhrasesAndTranslationLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogCombinePhrasesAndTranslation"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogCombinePhrasesAndTranslation.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+    stvblogGetJobListLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogGetJobList"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogGetJobList.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+    stvblogFinalizeProcessLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogFinalizeProcess"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogFinalizeProcess.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+    stvblogCheckMediaConvertJobStatusLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogCheckMediaConvertJobStatus"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogCheckMediaConvertJobStatus.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+    stvblogTranslateTranscriptLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogTranslateTranscript"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogTranslateTranscript.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+    stvblogCreateMediaConvertJobLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogCreateMediaConvertJob"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogCreateMediaConvertJob.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+    stvblogCheckTranscribeJobStatusLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogCheckTranscribeJobStatus"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogCheckTranscribeJobStatus.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+    stvblogCreatePhrasesFromTranscriptionLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogCreatePhrasesFromTranscription"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogCreatePhrasesFromTranscription.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+    stvblogTranscribeMediaLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogTranscribeMedia"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogTranscribeMedia.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+
+    stvblogGetUploadUrlLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogGetUploadUrl"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogGetUploadUrl.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+    stvblogPrepareProcessLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogPrepareProcess"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogPrepareProcess.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+
+    stvblogCheckTranslationJobStatusLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogCheckTranslationJobStatus"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogCheckTranslationJobStatus.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+    stvblogCreateSSMLLambdaFunction:
+        Type: "AWS::Lambda::Function"
+        DependsOn:
+            - stvblogBoto3LambdaLayer
+            - stvblogStvblogLambdaLayer
+            - stvblogLambaExecuteRole
+        Properties:
+            Description: ""
+            FunctionName: "stvblogCreateSSML"
+            Handler: "lambda_function.lambda_handler"
+            Code: 
+                S3Bucket: !Ref S3CodeBucket 
+                S3Key: "lambda/stvblogCreateSSML.zip"
+            MemorySize: 512
+            Role: !GetAtt stvblogLambaExecuteRole.Arn
+            Runtime: "python3.8"
+            Timeout: 60
+            ReservedConcurrentExecutions: 4
+            TracingConfig: 
+                Mode: "PassThrough"
+            Layers: 
+              - !Ref stvblogBoto3LambdaLayer
+              - !Ref stvblogStvblogLambdaLayer
+
+######################
+# Lambda Permissions #
+######################
+    stvblogGetJobListLambdaPermission:
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            Action: "lambda:InvokeFunction"
+            FunctionName: !GetAtt stvblogGetJobListLambdaFunction.Arn
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${stvblogJobV2Api}/*/*/job"
+
+    stvblogGetUploadUrlLambdaPermission:
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            Action: "lambda:InvokeFunction"
+            FunctionName: !GetAtt stvblogGetUploadUrlLambdaFunction.Arn
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${stvblogJobV2Api}/*/*/upload"
+
+###############
+# API Gateway #
+###############
+    stvblogJobV2Api:
+        Type: "AWS::ApiGatewayV2::Api"
+        Properties:
+            Name: "stvblogJobApi"
+            ApiKeySelectionExpression: "$request.header.x-api-key"
+            ProtocolType: "HTTP"
+            RouteSelectionExpression: "$request.method $request.path"
+            CorsConfiguration: 
+                AllowCredentials: false
+                AllowHeaders: 
+                  - "*"
+                AllowMethods: 
+                  - "*"
+                AllowOrigins: 
+                  - "*"
+                MaxAge: 0
+            DisableExecuteApiEndpoint: false
+
+    stvblogGetUploadUrlV2ApiIntegration:
+        Type: "AWS::ApiGatewayV2::Integration"
+        DependsOn: stvblogGetUploadUrlLambdaFunction
+        Properties:
+            ApiId: !Ref stvblogJobV2Api
+            ConnectionType: "INTERNET"
+            IntegrationMethod: "POST"
+            IntegrationType: "AWS_PROXY"
+            IntegrationUri: !GetAtt stvblogGetUploadUrlLambdaFunction.Arn
+            TimeoutInMillis: 30000
+            PayloadFormatVersion: "2.0"
+
+    stvblogStepFunctionStartV2ApiIntegration:
+        Type: "AWS::ApiGatewayV2::Integration"
+        Properties:
+            ApiId: !Ref stvblogJobV2Api
+            ConnectionType: "INTERNET"
+            IntegrationType: "AWS_PROXY"
+            IntegrationSubtype: StepFunctions-StartExecution
+            CredentialsArn: !GetAtt stvblogStepFunctionExecuteRole.Arn
+            RequestParameters: 
+                Input: "$request.body"
+                StateMachineArn: !Sub "arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:stvblogProcessMedia"
+            TimeoutInMillis: 30000
+            PayloadFormatVersion: "1.0"
+
+    stvblogGetJobListV2ApiIntegration:
+        Type: "AWS::ApiGatewayV2::Integration"
+        DependsOn: stvblogGetJobListLambdaFunction
+        Properties:
+            ApiId: !Ref stvblogJobV2Api
+            ConnectionType: "INTERNET"
+            IntegrationMethod: "POST"
+            IntegrationType: "AWS_PROXY"
+            IntegrationUri: !GetAtt stvblogGetJobListLambdaFunction.Arn
+            TimeoutInMillis: 30000
+            PayloadFormatVersion: "2.0"
+
+    stvblogPostJobV2ApiRoute:
+        Type: "AWS::ApiGatewayV2::Route"
+        Properties:
+            ApiId: !Ref stvblogJobV2Api
+            ApiKeyRequired: false
+            AuthorizationType: " NONE"
+            RouteKey: "POST /job"
+            Target: !Sub "integrations/${stvblogStepFunctionStartV2ApiIntegration}"
+
+    stvblogGetUploadV2ApiRoute:
+        Type: "AWS::ApiGatewayV2::Route"
+        DependsOn: stvblogGetUploadUrlV2ApiIntegration
+        Properties:
+            ApiId: !Ref stvblogJobV2Api
+            ApiKeyRequired: false
+            AuthorizationType: " NONE"
+            RouteKey: "GET /upload"
+            Target: !Sub "integrations/${stvblogGetUploadUrlV2ApiIntegration}"
+
+    stvblogGetJobV2ApiRoute:
+        Type: "AWS::ApiGatewayV2::Route"
+        DependsOn: stvblogGetJobListV2ApiIntegration
+        Properties:
+            ApiId: !Ref stvblogJobV2Api
+            ApiKeyRequired: false
+            AuthorizationType: " NONE"
+            RouteKey: "GET /job"
+            Target: !Sub "integrations/${stvblogGetJobListV2ApiIntegration}"
+
+    svtblogDefaultV2ApiStage:
+        Type: "AWS::ApiGatewayV2::Stage"
+        Properties:
+            StageName: "$default"
+            ApiId: !Ref stvblogJobV2Api
+            AutoDeploy: true
+            AccessLogSettings:
+                DestinationArn: !GetAtt stvblogAPILogGroup.Arn
+                Format: >-
+                    {"requestId":"$context.requestId", "ip": "$context.identity.sourceIp",
+                    "caller":"$context.identity.caller",
+                    "user":"$context.identity.user","requestTime":"$context.requestTime"}
+
+############
+# DynamoDB #
+############
+    stvblogDynamoDBTable:
+        Type: "AWS::DynamoDB::Table"
+        Properties:
+            AttributeDefinitions: 
+              - 
+                AttributeName: "ProcessName"
+                AttributeType: "S"
+            TableName: "stvblog"
+            KeySchema: 
+              - 
+                AttributeName: "ProcessName"
+                KeyType: "HASH"
+            BillingMode: "PROVISIONED"
+            ProvisionedThroughput: 
+                ReadCapacityUnits: 5
+                WriteCapacityUnits: 5
+            PointInTimeRecoverySpecification:
+                PointInTimeRecoveryEnabled: true
+            SSESpecification: 
+                SSEEnabled: false
+
+
+
+##################
+# Step Functions #
+##################
+    stvblogProcessMediaStepFunction:
+        Type: "AWS::StepFunctions::StateMachine"
+        Properties:
+            StateMachineName: "stvblogProcessMedia"
+            DefinitionString: !Sub |
+                {
+                  "Comment": "stvblog - Process Media to Transcribe, Translate, Subtitle, and Package it",
+                  "StartAt": "PrepareProcess",
+                  "States": {
+                    "PrepareProcess": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogPrepareProcess",
+                      "ResultPath": "$",
+                      "Next": "CreateTranscriptionJob"
+                    },
+                    "CreateTranscriptionJob": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogTranscribeMedia",
+                      "ResultPath": "$",
+                      "Next": "PollWaitTime"
+                    },
+                    "PollWaitTime": {
+                      "Type": "Wait",
+                      "Seconds": 30,
+                      "Next": "CheckTranscribeJobStatus"
+                    },
+                    "CheckTranscribeJobStatus": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckTranscribeJobStatus",
+                      "InputPath": "$",
+                      "ResultPath": "$",
+                      "Next": "PollStatus"
+                    },
+                    "PollStatus": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Variable": "$.Outputs.transcribe.transcribeJobStatus",
+                          "StringEquals": "COMPLETED",
+                          "Next": "CreatePhrasesFromTranscription"
+                        },
+                        {
+                          "Variable": "$.Outputs.transcribe.transcribeJobStatus",
+                          "StringEquals": "IN_PROGRESS",
+                          "Next": "PollWaitTime"
+                        }
+                      ],
+                      "Default": "PollError"
+                    },
+                    "CreatePhrasesFromTranscription": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreatePhrasesFromTranscription",
+                      "ResultPath": "$",
+                      "Next": "SubtitleAndTranslate"
+                    },
+                    "SubtitleAndTranslate": {
+                      "Type": "Map",
+                      "MaxConcurrency": 0,
+                      "ItemsPath": "$.Targets",
+                      "Parameters": {
+                        "input.$": "$",
+                        "item.$": "$$.Map.Item.Value",
+                        "index.$": "$$.Map.Item.Index"
+                      },
+                      "Iterator": {
+                        "StartAt": "TranslateTranscript",
+                        "States": {
+                          "TranslateTranscript": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogTranslateTranscript",
+                            "Next": "PollTranslationWaitTime"
+                          },
+                          "PollTranslationWaitTime": {
+                            "Type": "Wait",
+                            "Seconds": 120,
+                            "Next": "CheckTranslationJobStatus"
+                          },
+                          "CheckTranslationJobStatus": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckTranslationJobStatus",
+                            "Next": "PollTranslationStatus"
+                          },
+                          "PollTranslationStatus": {
+                            "Type": "Choice",
+                            "Choices": [
+                              {
+                                "Variable": "$.item.translate.translateJobStatus",
+                                "StringEquals": "COMPLETED",
+                                "Next": "CombinePhrasesAndTranslation"
+                              },
+                              {
+                                "Variable": "$.item.translate.translateJobStatus",
+                                "StringEquals": "IN_PROGRESS",
+                                "Next": "PollTranslationWaitTime"
+                              }
+                            ],
+                            "Default": "TranslationPollError"
+                          },
+                          "CombinePhrasesAndTranslation": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCombinePhrasesAndTranslation",
+                            "Next": "CreateSubtitles"
+                          },
+                          "CreateSubtitles": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreateSRT",
+                            "Next": "PrepareSSML"
+                          },
+                          "PrepareSSML": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreateSSML",
+                            "Next": "CreatePollyAudio"
+                          },
+                          "CreatePollyAudio": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreatePollyAudio",
+                            "Next": "CopyResultsToFinal"
+                          },
+                          "CopyResultsToFinal": {
+                            "Type": "Task",
+                            "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCopyResultsToFinalInput",
+                            "End": true
+                          },
+                          "TranslationPollError": {
+                            "Type": "Fail",
+                            "Cause": "Translation Polling Error"
+                          }
+                        }
+                      },
+                      "Next": "CreateMediaConvertJob"
+                    },
+                    "CreateMediaConvertJob": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCreateMediaConvertJob",
+                      "Next": "MediaConvertWaitTime"
+                    },
+                    "MediaConvertWaitTime": {
+                      "Type": "Wait",
+                      "Seconds": 30,
+                      "Next": "CheckMediaConvertJobStatus"
+                    },
+                    "CheckMediaConvertJobStatus": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogCheckMediaConvertJobStatus",
+                      "Next": "PollMediaConvertStatus"
+                    },
+                    "PollMediaConvertStatus": {
+                      "Type": "Choice",
+                      "Choices": [
+                        {
+                          "Variable": "$.Outputs.mediaConvert.mediaConvertJobStatus",
+                          "StringEquals": "COMPLETE",
+                          "Next": "Finalize"
+                        },
+                        {
+                          "Or": [
+                            {
+                              "Variable": "$.Outputs.mediaConvert.mediaConvertJobStatus",
+                              "StringEquals": "PROGRESSING"
+                            },
+                            {
+                              "Variable": "$.Outputs.mediaConvert.mediaConvertJobStatus",
+                              "StringEquals": "SUBMITTED"
+                            }
+                          ],
+                          "Next": "MediaConvertWaitTime"
+                        }
+                      ],
+                      "Default": "MediaConvertPollError"
+                    },
+                    "MediaConvertPollError": {
+                      "Type": "Fail",
+                      "Cause": "Translation Polling Error"
+                    },
+                    "PollError": {
+                      "Type": "Fail",
+                      "Cause": "Polling Error"
+                    },
+                    "Finalize": {
+                      "Type": "Task",
+                      "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:stvblogFinalizeProcess",
+                      "End": true
+                    }
+                  }
+                }
+                
+            RoleArn: !GetAtt stvblogProcessMediaRole.Arn
+            StateMachineType: "STANDARD"
+            LoggingConfiguration: 
+                Destinations: 
+                  - 
+                    CloudWatchLogsLogGroup: 
+                        LogGroupArn: !GetAtt stvblogProcessMediaLogsLogGroup.Arn
+                IncludeExecutionData: true
+                Level: "ALL"
+
+#############
+# Log Group #
+#############
+    stvblogProcessMediaLogsLogGroup:
+        Type: "AWS::Logs::LogGroup"
+        Properties:
+            LogGroupName: !Sub "/aws/vendedlogs/states/stvblogProcessMedia-Logs"
+            RetentionInDays: 14
+
+    stvblogAPILogGroup:
+        Type: "AWS::Logs::LogGroup"
+        Properties:
+            LogGroupName: !Sub "/aws/vendedlogs/states/stvblogAPI-Logs"
+            RetentionInDays: 14
+
+###################
+# Parameter Store #
+###################
+    stvblogCloudFrontUrlParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/CloudFrontUrl"
+            Type: "String"
+            Value: !GetAtt stvblogCloudFrontDistribution.DomainName
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogbaseBucketNameParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/baseBucketName"
+            Type: "String"
+            Value: !Ref stvblogBucket
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogfinalInputParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/finalInput"
+            Type: "String"
+            Value: "finalInput"
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogmediaInputParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/mediaInput"
+            Type: "String"
+            Value: "mediaInput"
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogpollyInputParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/pollyInput"
+            Type: "String"
+            Value: "pollyInput"
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogtranscriptionInputParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/transcriptionInput"
+            Type: "String"
+            Value: "transcriptionInput"
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogregionParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/region"
+            Type: "String"
+            Value: !Ref AWS::Region
+            DataType: "text"
+            Tier: "Standard"
+
+    stvbloguploadFolderParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/uploadFolder"
+            Type: "String"
+            Value: !Ref stvblogInBucket
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogpollyOutputParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/pollyOutput"
+            Type: "String"
+            Value: "pollyOutput"
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogtranslateDataAccessRoleARNParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/translateDataAccessRoleARN"
+            Type: "String"
+            Value: !GetAtt stvblogTranslateS3BucketPermissionsRole.Arn
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogtranscriptionOutputParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/transcriptionOutput"
+            Type: "String"
+            Value: "transcriptionOutput"
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogMediaConvertRoleParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/MediaConvertRole"
+            Type: "String"
+            Value: !GetAtt stvblogElementalMediaConvertRole.Arn
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogfinalOutputParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/finalOutput"
+            Type: "String"
+            Value: "finalOutput"
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogtranslationOutputParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/translationOutput"
+            Type: "String"
+            Value: "translationOutput"
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogtranslationInputParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/translationInput"
+            Type: "String"
+            Value: "translationInput"
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogsubtitleOutputParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/subtitleOutput"
+            Type: "String"
+            Value: "subtitleOutput"
+            DataType: "text"
+            Tier: "Standard"
+
+    stvblogsubtitleInputParameter:
+        Type: "AWS::SSM::Parameter"
+        Properties:
+            Name: "/stvblog/subtitleInput"
+            Type: "String"
+            Value: "subtitleInput"
+            DataType: "text"
+            Tier: "Standard"
+
+##############
+# Cloudfront #
+##############
+    stvblogCloudFrontDistribution:
+        Type: "AWS::CloudFront::Distribution"
+        DependsOn: stvblogLogBucket
+        Properties:
+            DistributionConfig: 
+                Origins: 
+                  - 
+                    ConnectionAttempts: 3
+                    ConnectionTimeout: 10
+                    DomainName: !Sub "${stvblogBucket}.s3.amazonaws.com"
+                    Id: !Sub "S3-${stvblogBucket}"
+                    OriginPath: ""
+                    S3OriginConfig: 
+                        OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${stvblogCloudFrontOriginAccessIdentity}"
+                  - 
+                    ConnectionAttempts: 3
+                    ConnectionTimeout: 10
+                    DomainName: !Sub "${stvblogAppBucket}.s3.amazonaws.com"
+                    Id: !Sub "S3-${stvblogAppBucket}"
+                    OriginPath: ""
+                    S3OriginConfig: 
+                        OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${stvblogCloudFrontOriginAccessIdentity}"
+                OriginGroups: 
+                    Quantity: 0
+                DefaultCacheBehavior: 
+                    AllowedMethods: 
+                      - "HEAD"
+                      - "GET"
+                      - "OPTIONS"
+                    CachedMethods: 
+                      - "HEAD"
+                      - "GET"
+                      - "OPTIONS"
+                    Compress: false
+                    CachePolicyId: "658327ea-f89d-4fab-a63d-7e88639e58f6"
+                    OriginRequestPolicyId: "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf"
+                    ForwardedValues:
+                        QueryString: false 
+                        Cookies:
+                          Forward: none
+                    SmoothStreaming: false
+                    TargetOriginId: !Sub "S3-${stvblogBucket}"
+                    ViewerProtocolPolicy: "allow-all"
+                CacheBehaviors: 
+                  - 
+                    AllowedMethods: 
+                      - "HEAD"
+                      - "DELETE"
+                      - "POST"
+                      - "GET"
+                      - "OPTIONS"
+                      - "PUT"
+                      - "PATCH"
+                    Compress: false
+                    CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+                    OriginRequestPolicyId: "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf"
+                    ForwardedValues:
+                        QueryString: false 
+                        Cookies:
+                          Forward: none
+                    PathPattern: "*html"
+                    SmoothStreaming: false
+                    TargetOriginId: !Sub "S3-${stvblogAppBucket}"
+                    ViewerProtocolPolicy: "allow-all"
+                  - 
+                    AllowedMethods: 
+                      - "HEAD"
+                      - "GET"
+                    Compress: false
+                    CachePolicyId: "4135ea2d-6df8-44a3-9df3-4b5a84be39ad"
+                    OriginRequestPolicyId: "88a5eaf4-2fd4-4709-b370-b4c650ea3fcf"
+                    ForwardedValues:
+                        QueryString: false 
+                        Cookies:
+                          Forward: none
+                    PathPattern: "*js"
+                    SmoothStreaming: false
+                    TargetOriginId: !Sub "S3-${stvblogAppBucket}"
+                    ViewerProtocolPolicy: "allow-all"
+                Comment: ""
+                PriceClass: "PriceClass_100"
+                Enabled: true
+                ViewerCertificate: 
+                    CloudFrontDefaultCertificate: true
+                    MinimumProtocolVersion: "TLSv1.2_2021"
+                Restrictions: 
+                    GeoRestriction: 
+                        RestrictionType: "none"
+                HttpVersion: "http2"
+                DefaultRootObject: ""
+                IPV6Enabled: true
+                Logging:
+                    Bucket: !Sub "${stvblogLogBucket}.s3.amazonaws.com"
+                    Prefix: "logs/"
+
+    stvblogCloudFrontOriginAccessIdentity:
+        Type: "AWS::CloudFront::CloudFrontOriginAccessIdentity"
+        Properties:
+            CloudFrontOriginAccessIdentityConfig: 
+                Comment: !Sub "access-identity-stvblog"
+
+###########
+# Outputs #
+########### 
+Outputs:
+    FrontendUrl:
+        Description: "stvblog Front End URL"
+        Value: !Join [ "/", [!GetAtt stvblogCloudFrontDistribution.DomainName, "index.html"]]
+
+    HttpApiUrl:
+        Description: URL of your API endpoint
+        Value: !Sub "https://${stvblogJobV2Api}.execute-api.${AWS::Region}.${AWS::URLSuffix}"
+
+    S3UploadBucketName:
+        Description: "S3 Bucket Name for uploadBucket variable in frontend scripts.js file"
+        Value: !Ref stvblogInBucket
+
+    S3AppBucketName:
+        Description: "S3 Bucket Name for uploading the frontend application files"
+        Value: !Ref stvblogAppBucket

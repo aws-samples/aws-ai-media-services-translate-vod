@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset=utf-8 />
+<title>Translate App Player</title>
+  
+
+  <link href="https://unpkg.com/video.js/dist/video-js.css" rel="stylesheet">
+  <script src="https://unpkg.com/video.js/dist/video.js"></script>
+  <script src="https://unpkg.com/videojs-contrib-hls/dist/videojs-contrib-hls.js"></script>
+  <script src="scripts.js"></script>
+  
+   
+</head>
+<body>
+
+  <div id="player"></div>
+  
+  
+<script>
+var new_url = getParameterByName('url');
+var player = `<video autoplay id="my_video_1" class="video-js vjs-fluid vjs-default-skin" controls preload="auto"
+  data-setup='{"fluid": true}'>
+    <source id="videoSource" src=" `+ new_url + `" type="application/x-mpegURL">
+  </video>`
+
+  document.getElementById("player").innerHTML = player;
+
+</script> 
+
+  
+</body>
+</html>
