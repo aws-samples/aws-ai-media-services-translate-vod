@@ -5,7 +5,7 @@ This sample project includes a CloudFormation template which deploys a demo arch
 AWS resources and automation workflow are created by running the provided CloudFormation template.
   
 Below is a diagram showing the workflow for this sample project.
-!(images/architecture.png)
+![](images/architecture.png)
   
 # Requirements
   
@@ -105,6 +105,6 @@ This library is licensed under the MIT-0 License. See the LICENSE file.
 # Contributors
   
 Rob Dachowski, AWS Solutions Architect Manager, robdac@amazon.com  
-Katreena Mullican, AWS Sr Partner Solutions Architect, mullicak@amazon.com  
+Katreena Mullican, AWS Sr Solutions Architect, mullicak@amazon.com  
 Matt Juliana, AWS Sr Partner Solutions Architect, mattjul@amazon.com  
 
